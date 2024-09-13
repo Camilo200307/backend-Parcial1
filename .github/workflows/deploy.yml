@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: '3.x'
 
@@ -43,9 +43,16 @@ jobs:
               git reset --hard origin/main &&
               git pull origin main &&
               
-              # Activar el entorno virtual
-              source venv/bin/activate &&
+              # Asegurarse de que el entorno virtual esté activado correctamente
+              if [ -f venv/bin/activate ]; then
+                source venv/bin/activate;
+              else
+                python3 -m venv venv && source venv/bin/activate;
+              fi &&
               
+              # Asegurarse de que pip esté disponible
+              python3 -m ensurepip --upgrade &&
+
               # Instalar dependencias
               pip install -r requirements.txt &&
               
