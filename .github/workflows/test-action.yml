@@ -7,16 +7,25 @@ on:
 
 jobs:
   test:
-    name: Simple Test on EC2
+    name: Test installing dependencies
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Echo a message
-        run: echo "Running a simple test workflow!"
+      - name: Install Python dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Check Python Version
         run: |
           python --version
+
+      - name: Run Flask App
+        run: |
+          export FLASK_APP=app.py
+          flask run
