@@ -1,0 +1,22 @@
+name: Simple Test
+
+on:
+  push:
+    branches:
+      - testing-actions
+
+jobs:
+  test:
+    name: Simple Test on EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Echo a message
+        run: echo "Running a simple test workflow!"
+
+      - name: Check Python Version
+        run: |
+          python --version
