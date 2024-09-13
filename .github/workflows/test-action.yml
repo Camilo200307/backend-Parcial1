@@ -1,33 +1,62 @@
-name: Simple Test
+name: Deploy to EC2 (Testing)
 
 on:
   push:
     branches:
-      - testing-actions
+      - testing-actions  # Asegúrate de que se aplique solo a esta rama de pruebas
 
 jobs:
-  test:
-    name: Test installing dependencies
+  deploy:
+    name: Deploy application to EC2 (Testing)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Install Python dependencies
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
 
-      - name: Check Python Version
+      - name: Deploy to EC2 (Testing)
+        env:
+          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_IP: ${{ secrets.SSH_HOST }}
+          EC2_USER: ${{ secrets.SSH_USER }}
+          APP_DIR: /home/ubuntu/backend-Parcial1  # Asegúrate de que este sea el directorio correcto en la EC2
+          APP_FILE: app.py
+       
         run: |
-          source venv/bin/activate
-          python --version
+          echo "$EC2_PRIVATE_KEY" > ec2_key && chmod 600 ec2_key
+          ssh -o StrictHostKeyChecking=no -i ec2_key ${EC2_USER}@${SERVER_IP} '
+              # Cambiar al directorio del proyecto en la EC2
+              cd ${APP_DIR} &&
+              
+              # Verificar si es un repositorio Git
+              git status &&
+              
+              # Actualizar el código desde GitHub
+              git fetch --all &&
+              git reset --hard origin/testing-actions &&
+              git pull origin testing-actions &&
+              
+              # Crear el entorno virtual si no existe
+              if [ ! -d "venv" ]; then
+                  python3 -m venv venv;
+              fi &&
+              
+              # Activar el entorno virtual
+              source venv/bin/activate &&
+              
+              # Instalar dependencias
+              pip install --upgrade pip &&
+              pip install -r requirements.txt &&
+              
+              # Detener cualquier proceso en el puerto 5000
+              sudo fuser -k 5000/tcp &&
+              
+              # Ejecutar la aplicación con Gunicorn
+              gunicorn -b 0.0.0.0:5000 ${APP_FILE}:app --daemon
+          '
 
-      - name: Run Flask App
-        run: |
-          source venv/bin/activate
-          export FLASK_APP=app.py
-          flask run
