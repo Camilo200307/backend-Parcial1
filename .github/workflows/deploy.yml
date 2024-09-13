@@ -43,6 +43,10 @@ jobs:
               git reset --hard origin/main &&
               git pull origin main &&
               
+              # Instalar pip si no está disponible
+              sudo apt update &&
+              sudo apt install -y python3-pip &&
+              
               # Asegurarse de que el entorno virtual esté activado correctamente
               if [ -f venv/bin/activate ]; then
                 source venv/bin/activate;
@@ -50,9 +54,6 @@ jobs:
                 python3 -m venv venv && source venv/bin/activate;
               fi &&
               
-              # Asegurarse de que pip esté disponible
-              python3 -m ensurepip --upgrade &&
-
               # Instalar dependencias
               pip install -r requirements.txt &&
               
