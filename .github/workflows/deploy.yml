@@ -11,40 +11,53 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v2
         with:
           python-version: '3.x'
 
-      - name: Deploy to EC2
-        env:
-          EC2_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SERVER_IP: ${{ secrets.SSH_HOST }}
-          EC2_USER: ${{ secrets.SSH_USER }}
-          APP_DIR: /home/ubuntu/backend-Parcial1
-          APP_FILE: app.py
-       
+      - name: Set ownership and connect to EC2
         run: |
-          echo "$EC2_PRIVATE_KEY" > ec2_key && chmod 600 ec2_key
-          ssh -o StrictHostKeyChecking=no -i ec2_key ${EC2_USER}@${SERVER_IP} '
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+          # Crear el archivo known_hosts si no existe
+          mkdir -p /home/runner/.ssh
+          touch /home/runner/.ssh/known_hosts
+          
+          # Limpiar cualquier llave anterior de known_hosts
+          ssh-keygen -R ${{ secrets.SSH_HOST }} >> /home/runner/.ssh/known_hosts
+
+          # Conectar y ejecutar comandos en la EC2
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ${EC2_USER}@${SSH_HOST} "
               # Cambiar al directorio del proyecto
               cd ${APP_DIR} &&
+              
               # Verificar si es un repositorio Git
               git status &&
+              
               # Actualizar el código desde GitHub
               git fetch --all &&
               git reset --hard origin/main &&
               git pull origin main &&
+              
               # Activar el entorno virtual
               source venv/bin/activate &&
+              
               # Instalar dependencias
               pip install -r requirements.txt &&
+              
               # Detener cualquier proceso en el puerto 5000
               sudo fuser -k 5000/tcp &&
+              
               # Ejecutar la aplicación con Gunicorn
               gunicorn -b 0.0.0.0:5000 ${APP_FILE}:app --daemon
-          '
-
-
+          "
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          EC2_USER: ${{ secrets.SSH_USER }}
+          APP_DIR: /home/ubuntu/backend-Parcial1
+          APP_FILE: app.py
