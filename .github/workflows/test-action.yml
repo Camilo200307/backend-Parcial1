@@ -23,9 +23,11 @@ jobs:
 
       - name: Check Python Version
         run: |
+          source venv/bin/activate
           python --version
 
       - name: Run Flask App
         run: |
+          source venv/bin/activate
           export FLASK_APP=app.py
           flask run
